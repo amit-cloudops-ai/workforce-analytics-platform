@@ -1,0 +1,322 @@
+openapi: 3.0.3
+info:
+  title: Workforce Analytics API
+  version: 1.0.0
+  description: >
+    Read-only API behind API Gateway HTTP API. Every route requires a Cognito JWT
+    (Authorization: Bearer <id_token>) whose cognito:groups claim contains HR_Admin or Leadership.
+    This file is the source of truth for the API contract (see AGENTS.md).
+servers:
+  - url: https://{apiId}.execute-api.ap-south-1.amazonaws.com
+    variables:
+      apiId:
+        default: example
+security:
+  - bearerAuth: []
+tags:
+  - name: metrics
+  - name: attrition
+  - name: org
+  - name: system
+paths:
+  /metrics/headcount:
+    get:
+      tags: [metrics]
+      operationId: getHeadcount
+      summary: Monthly headcount, hires and departures per department
+      parameters:
+        - name: months
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 12, default: 12 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/HeadcountResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "500": { $ref: "#/components/responses/ServerError" }
+  /metrics/leave:
+    get:
+      tags: [metrics]
+      operationId: getLeaveUtilisation
+      summary: Leave utilisation per department, current month vs previous 3-month average
+      parameters:
+        - name: month
+          in: query
+          required: false
+          description: Defaults to the latest month with data
+          schema: { type: string, pattern: '^\d{4}-\d{2}$' }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LeaveResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "500": { $ref: "#/components/responses/ServerError" }
+  /metrics/funnel:
+    get:
+      tags: [metrics]
+      operationId: getRecruitmentFunnel
+      summary: Recruitment funnel for a month (cohort of candidates received that month)
+      parameters:
+        - name: month
+          in: query
+          required: false
+          schema: { type: string, pattern: '^\d{4}-\d{2}$' }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FunnelResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "500": { $ref: "#/components/responses/ServerError" }
+  /attrition/top10:
+    get:
+      tags: [attrition]
+      operationId: getTopAttritionRisk
+      summary: Top 10 active employees by attrition risk score, with contributing factors
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AttritionResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "500": { $ref: "#/components/responses/ServerError" }
+  /org/tree:
+    get:
+      tags: [org]
+      operationId: getOrgTree
+      summary: Org tree as nested JSON built recursively from manager_id
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OrgTreeResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "500": { $ref: "#/components/responses/ServerError" }
+  /system/health:
+    get:
+      tags: [system]
+      operationId: getSystemHealth
+      summary: API Gateway request counts and Lambda errors for the last 60 minutes
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/HealthResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "500": { $ref: "#/components/responses/ServerError" }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  responses:
+    Unauthorized:
+      description: Missing or invalid token
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Forbidden:
+      description: Authenticated but not in HR_Admin or Leadership
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    ServerError:
+      description: Unexpected error
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string, example: forbidden }
+            message: { type: string }
+    Month:
+      type: string
+      pattern: '^\d{4}-\d{2}$'
+      example: "2026-11"
+    DepartmentSlug:
+      type: string
+      enum: [engineering, product, design, sales, marketing, hr, finance, operations]
+    HeadcountResponse:
+      type: object
+      required: [months, departments, totals, generated_at]
+      properties:
+        months:
+          type: array
+          description: Ascending, oldest first
+          items: { $ref: "#/components/schemas/Month" }
+        departments:
+          type: array
+          items:
+            type: object
+            required: [slug, name, headcount, hires, departures]
+            properties:
+              slug: { $ref: "#/components/schemas/DepartmentSlug" }
+              name: { type: string }
+              headcount: { type: array, items: { type: integer } }
+              hires: { type: array, items: { type: integer } }
+              departures: { type: array, items: { type: integer } }
+        totals:
+          type: object
+          required: [headcount, hires, departures]
+          properties:
+            headcount: { type: array, items: { type: integer } }
+            hires: { type: array, items: { type: integer } }
+            departures: { type: array, items: { type: integer } }
+        generated_at: { type: string, format: date-time }
+    LeaveResponse:
+      type: object
+      required: [month, departments, generated_at]
+      properties:
+        month: { $ref: "#/components/schemas/Month" }
+        departments:
+          type: array
+          items:
+            type: object
+            required: [slug, name, utilisation_pct, three_month_avg_pct]
+            properties:
+              slug: { $ref: "#/components/schemas/DepartmentSlug" }
+              name: { type: string }
+              utilisation_pct: { type: number }
+              three_month_avg_pct: { type: number }
+        generated_at: { type: string, format: date-time }
+    FunnelResponse:
+      type: object
+      required: [month, stages, generated_at]
+      properties:
+        month: { $ref: "#/components/schemas/Month" }
+        stages:
+          type: array
+          description: Always 5 items in order received, shortlisted, interviewed, offered, joined
+          minItems: 5
+          maxItems: 5
+          items:
+            type: object
+            required: [stage, count, conversion_from_previous_pct]
+            properties:
+              stage:
+                type: string
+                enum: [received, shortlisted, interviewed, offered, joined]
+              count: { type: integer }
+              conversion_from_previous_pct:
+                type: number
+                description: 100 for the first stage
+        generated_at: { type: string, format: date-time }
+    AttritionResponse:
+      type: object
+      required: [period, thresholds, distribution, employees, generated_at]
+      properties:
+        period: { $ref: "#/components/schemas/Month" }
+        thresholds:
+          type: object
+          required: [low_max, medium_max]
+          properties:
+            low_max: { type: number, example: 39.9 }
+            medium_max: { type: number, example: 64.9 }
+        distribution:
+          type: object
+          required: [low, medium, high]
+          properties:
+            low: { type: integer }
+            medium: { type: integer }
+            high: { type: integer }
+        employees:
+          type: array
+          maxItems: 10
+          items: { $ref: "#/components/schemas/RiskEmployee" }
+        generated_at: { type: string, format: date-time }
+    RiskEmployee:
+      type: object
+      required: [rank, employee_id, name, department, title, risk_score, band, factors]
+      properties:
+        rank: { type: integer, minimum: 1 }
+        employee_id: { type: string }
+        name: { type: string }
+        department: { $ref: "#/components/schemas/DepartmentSlug" }
+        title: { type: string }
+        risk_score: { type: number, minimum: 0, maximum: 100 }
+        band: { type: string, enum: [low, medium, high] }
+        factors:
+          type: array
+          description: Always 3 items, one per component
+          items:
+            type: object
+            required: [factor, input, weighted_points]
+            properties:
+              factor: { type: string, enum: [performance, leave, tenure] }
+              input:
+                type: object
+                description: Raw input, e.g. {performance_score:2} / {leave_days_12m:20} / {tenure_months:8}
+                additionalProperties: { type: number }
+              weighted_points: { type: number }
+    OrgNode:
+      type: object
+      required: [employee_id, name, title, department, children]
+      properties:
+        employee_id: { type: string }
+        name: { type: string }
+        title: { type: string }
+        department: { $ref: "#/components/schemas/DepartmentSlug" }
+        children:
+          type: array
+          items: { $ref: "#/components/schemas/OrgNode" }
+    OrgTreeResponse:
+      type: object
+      required: [root, employee_count, warnings, generated_at]
+      properties:
+        root: { $ref: "#/components/schemas/OrgNode" }
+        employee_count: { type: integer, description: Active employees included in the tree }
+        warnings:
+          type: array
+          description: e.g. orphan attached to root, cycle broken, depth limit hit
+          items: { type: string }
+        generated_at: { type: string, format: date-time }
+    Point:
+      type: object
+      required: [ts, value]
+      properties:
+        ts: { type: string, format: date-time }
+        value: { type: number }
+    HealthResponse:
+      type: object
+      required: [window_minutes, api_requests, api_5xx, lambda_errors, aggregator, generated_at]
+      properties:
+        window_minutes: { type: integer, example: 60 }
+        api_requests: { $ref: "#/components/schemas/Series" }
+        api_5xx: { $ref: "#/components/schemas/Series" }
+        lambda_errors: { $ref: "#/components/schemas/Series" }
+        aggregator:
+          type: object
+          required: [status]
+          properties:
+            status: { type: string, enum: [ok, stale, unknown] }
+            last_success_at: { type: string, format: date-time }
+        generated_at: { type: string, format: date-time }
+    Series:
+      type: object
+      required: [points, total]
+      properties:
+        points: { type: array, items: { $ref: "#/components/schemas/Point" } }
+        total: { type: number }

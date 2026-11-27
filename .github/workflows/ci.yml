@@ -1,0 +1,67 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pr-title:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Enforce WFA-id title format"
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          if [[ ! "$TITLE" =~ ^WFA-[0-9]{3}:\ .+ ]]; then
+            echo "PR title must look like: WFA-012: Add leave utilisation metric"
+            exit 1
+          fi
+
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dev dependencies
+        run: pip install -r requirements-dev.txt
+      - name: Repo structure, contract, lint, tests
+        run: bash scripts/verify.sh
+
+  terraform:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.10.5"
+      - name: fmt
+        run: terraform fmt -check -recursive infra
+      - name: validate dev and prod
+        run: |
+          for e in dev prod; do
+            if ls infra/envs/$e/*.tf >/dev/null 2>&1; then
+              terraform -chdir=infra/envs/$e init -backend=false -input=false
+              terraform -chdir=infra/envs/$e validate
+            fi
+          done
+
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,51 @@
+name: terraform-plan
+
+# Read-only plan on pull requests that touch infra, so reviewers can see
+# exactly what will change. Needs the optional plan role (docs/09, step 6).
+on:
+  pull_request:
+    paths: ["infra/**", "services/**", "scripts/package.sh"]
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    env:
+      ROLE: ${{ vars.AWS_ROLE_ARN_PLAN }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check configuration
+        id: cfg
+        run: |
+          if [[ -z "$ROLE" ]] || ! ls infra/envs/dev/*.tf >/dev/null 2>&1; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "Plan role not configured or no Terraform yet: skipping." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: aws-actions/configure-aws-credentials@v4
+        if: steps.cfg.outputs.ready == 'true'
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN_PLAN }}
+          aws-region: ap-south-1
+      - uses: hashicorp/setup-terraform@v3
+        if: steps.cfg.outputs.ready == 'true'
+        with:
+          terraform_version: "1.10.5"
+      - name: Package lambdas
+        if: steps.cfg.outputs.ready == 'true'
+        run: bash scripts/package.sh
+      - name: Plan (dev)
+        if: steps.cfg.outputs.ready == 'true'
+        run: |
+          terraform -chdir=infra/envs/dev init -input=false
+          terraform -chdir=infra/envs/dev plan -input=false -lock=false -no-color -out=tfplan
+          {
+            echo '### terraform plan (dev)'
+            echo '```'
+            terraform -chdir=infra/envs/dev show -no-color tfplan
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

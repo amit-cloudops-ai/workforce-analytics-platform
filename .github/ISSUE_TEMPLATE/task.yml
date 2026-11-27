@@ -1,0 +1,35 @@
+name: Task
+description: A unit of planned work (one task = one PR)
+title: "WFA-XXX: "
+labels: ["task"]
+body:
+  - type: input
+    id: workstream
+    attributes:
+      label: Workstream
+      description: A = Platform & SRE, B = Data & Aggregation, C = API & Frontend
+    validations:
+      required: true
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+    validations:
+      required: true
+  - type: textarea
+    id: paths
+    attributes:
+      label: Allowed paths (the only files this PR may touch)
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Checklist, each item verifiable
+    validations:
+      required: true
+  - type: input
+    id: depends
+    attributes:
+      label: Depends on

@@ -1,0 +1,30 @@
+# Default owner: project lead reviews everything.
+# After teammates claim workstreams (docs/07-team-and-workstreams.md), replace the
+# owner on the Workstream B and C lines. Both people must have Write access.
+
+*                         @amit-cloudops-ai
+
+# Contracts: lead must always approve
+/docs/openapi.yaml        @amit-cloudops-ai
+/docs/03-data-model.md    @amit-cloudops-ai
+/docs/04-scoring.md       @amit-cloudops-ai
+/docs/02-architecture.md  @amit-cloudops-ai
+/AGENTS.md                @amit-cloudops-ai
+
+# Workstream A: Platform & SRE
+/infra/                   @amit-cloudops-ai
+/.github/                 @amit-cloudops-ai
+/scripts/                 @amit-cloudops-ai
+
+# Workstream B: Data & Aggregation   (proposed: @sush-kush, change after claiming)
+/data/                    @amit-cloudops-ai
+/services/aggregator/     @amit-cloudops-ai
+/tests/golden/            @amit-cloudops-ai
+
+# Workstream C: API & Frontend       (proposed: @dggk78, change after claiming)
+/services/api_metrics/    @amit-cloudops-ai
+/services/api_attrition/  @amit-cloudops-ai
+/services/api_org/        @amit-cloudops-ai
+/services/shared/         @amit-cloudops-ai
+/frontend/                @amit-cloudops-ai
+/tests/contract/          @amit-cloudops-ai

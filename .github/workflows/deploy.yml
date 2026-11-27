@@ -1,0 +1,103 @@
+name: deploy
+
+# dev: automatic on merge to main.
+# prod: manual dispatch, from a version tag (v*), requires approval on the "prod" environment.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        type: choice
+        options: [dev, prod]
+        default: dev
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: deploy-${{ inputs.environment || 'dev' }}
+  cancel-in-progress: false
+
+env:
+  TARGET: ${{ inputs.environment || 'dev' }}
+  AWS_REGION: ap-south-1
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment || 'dev' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Guard prod deploys to version tags
+        if: env.TARGET == 'prod'
+        run: |
+          if [[ "$GITHUB_REF" != refs/tags/v* ]]; then
+            echo "Prod deploys must run from a tag like v1.0.0 (choose the tag in 'Use workflow from')."
+            exit 1
+          fi
+
+      - name: Check configuration
+        id: cfg
+        env:
+          ROLE_DEV: ${{ vars.AWS_ROLE_ARN_DEV }}
+          ROLE_PROD: ${{ vars.AWS_ROLE_ARN_PROD }}
+        run: |
+          if [[ "$TARGET" == "prod" ]]; then ROLE="$ROLE_PROD"; else ROLE="$ROLE_DEV"; fi
+          if [[ -z "$ROLE" ]] || ! ls infra/envs/$TARGET/*.tf >/dev/null 2>&1; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "Role variable or Terraform for $TARGET missing: nothing to deploy yet." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+            echo "role=$ROLE" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        if: steps.cfg.outputs.ready == 'true'
+        with:
+          role-to-assume: ${{ steps.cfg.outputs.role }}
+          aws-region: ap-south-1
+
+      - uses: hashicorp/setup-terraform@v3
+        if: steps.cfg.outputs.ready == 'true'
+        with:
+          terraform_version: "1.10.5"
+
+      - name: Package lambdas
+        if: steps.cfg.outputs.ready == 'true'
+        run: bash scripts/package.sh
+
+      - name: Terraform plan
+        if: steps.cfg.outputs.ready == 'true'
+        run: |
+          terraform -chdir=infra/envs/$TARGET init -input=false
+          terraform -chdir=infra/envs/$TARGET plan -input=false -out=tfplan -no-color | tee plan.txt
+          if grep -Eq "[0-9]+ to destroy" plan.txt && ! grep -q " 0 to destroy" plan.txt; then
+            echo "::warning::Plan contains destroys. Review before approving."
+          fi
+
+      - name: Terraform apply
+        if: steps.cfg.outputs.ready == 'true'
+        run: terraform -chdir=infra/envs/$TARGET apply -input=false tfplan
+
+      - name: Publish frontend
+        if: steps.cfg.outputs.ready == 'true'
+        run: |
+          if [[ ! -f frontend/index.html ]]; then echo "No frontend yet."; exit 0; fi
+          T="terraform -chdir=infra/envs/$TARGET output -raw"
+          BUCKET=$($T frontend_bucket)
+          DIST=$($T cloudfront_distribution_id)
+          cat > frontend/config.json <<JSON
+          {
+            "region": "$AWS_REGION",
+            "apiUrl": "$($T api_url)",
+            "cognitoDomain": "$($T cognito_domain)",
+            "clientId": "$($T cognito_client_id)",
+            "siteUrl": "https://$($T cloudfront_domain)"
+          }
+          JSON
+          aws s3 sync frontend/ "s3://$BUCKET/" --delete --exclude "mock/*" --exclude "README.md"
+          aws cloudfront create-invalidation --distribution-id "$DIST" --paths "/*"
