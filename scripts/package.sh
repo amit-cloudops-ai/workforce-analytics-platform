@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Lambda packaging contract (see docs/02-architecture.md):
-#   services/<function>/handler.py  +  services/shared/ (+ optional services/<function>/requirements.txt)
+#   services/<function>/handler.py  +  services/shared/  (+ optional services/<function>/requirements.txt)
 #   -> build/<function>.zip   (handler.lambda_handler at the zip root)
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
