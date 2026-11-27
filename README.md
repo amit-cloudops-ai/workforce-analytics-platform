@@ -1,5 +1,13 @@
 # Workforce Analytics & Org Intelligence Dashboard
 
+<p align="center">
+  <img
+    src="docs/AWS%20Workforce%20Analytics%20Dashboard%20Architecture.png"
+    alt="AWS architecture diagram for the Workforce Analytics and Org Intelligence Dashboard"
+    width="100%"
+  />
+</p>
+
 **A production-deployed, serverless analytics layer that turns raw HR data into decisions.**
 A daily pipeline aggregates workforce metrics and computes a transparent attrition-risk score per employee. A Cognito-protected dashboard visualises headcount, leave, recruitment and risk, with an interactive org chart and a live system-health panel. Everything is infrastructure-as-code, deployed through CI/CD using GitHub OIDC, and designed to run inside the AWS free tier.
 
@@ -20,6 +28,8 @@ A daily pipeline aggregates workforce metrics and computes a transparent attriti
 - **System health:** API Gateway request counts and Lambda errors
 
 ## Architecture
+
+The image above is the high-level AWS deployment view. The Mermaid diagram below is retained as the editable logical data-flow view.
 
 ```mermaid
 flowchart LR
