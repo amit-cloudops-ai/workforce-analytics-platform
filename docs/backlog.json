@@ -1,0 +1,851 @@
+{
+  "repo": "amit-cloudops-ai/workforce-analytics-platform",
+  "milestones": [
+    "M1 Foundation & Design (Wk1)",
+    "M2 Data & Compute (Wk2)",
+    "M3 API, Auth & Frontend (Wk3)",
+    "M4 Operate, Harden & Release (Wk4)"
+  ],
+  "labels": {
+    "task": "0e8a16",
+    "bug": "d73a4a",
+    "ws:A-platform": "1d76db",
+    "ws:B-data": "5319e7",
+    "ws:C-api-frontend": "fbca04",
+    "ws:shared": "c5def5",
+    "contract-change": "b60205",
+    "blocked": "e99695"
+  },
+  "workstream_labels": {
+    "A": "ws:A-platform",
+    "B": "ws:B-data",
+    "C": "ws:C-api-frontend",
+    "ALL": "ws:shared"
+  },
+  "issues": [
+    {
+      "id": "WFA-001",
+      "workstream": "A",
+      "milestone": "M1 Foundation & Design (Wk1)",
+      "title": "Repo governance: ruleset, collaborators, environments, variables",
+      "goal": "Make `main` safe: protected branch, code-owner review, required checks, dev/prod environments, Actions variables.",
+      "paths": [
+        "(GitHub settings only, no code)",
+        "docs/09-bootstrap-console-guide.md (tick boxes)"
+      ],
+      "acceptance": [
+        "Ruleset `protect-main` active (PR + code-owner review + required checks + no force push)",
+        "`sush-kush` and `dggk78` have Write access",
+        "Environments `dev` and `prod` exist; `prod` requires reviewer and only `v*` tags",
+        "Secret scanning + push protection on",
+        "Evidence: screenshots in PR description"
+      ],
+      "depends_on": []
+    },
+    {
+      "id": "WFA-002",
+      "workstream": "A",
+      "milestone": "M1 Foundation & Design (Wk1)",
+      "title": "AWS account bootstrap: budgets, MFA, state bucket, OIDC provider and roles",
+      "goal": "Do Parts 1-3 of the bootstrap guide.",
+      "paths": [
+        "(AWS Console only)",
+        "docs/09-bootstrap-console-guide.md (tick boxes)"
+      ],
+      "acceptance": [
+        "Free-tier plan type and expiry noted in project channel",
+        "$1 budget and zero-spend budget active",
+        "State bucket `wfa-tfstate-amit-cloudops-ap-south-1` with versioning and public access blocked",
+        "OIDC provider and roles `wfa-github-deploy-dev`, `wfa-github-deploy-prod` (and `wfa-github-plan`) exist with exact `sub` conditions",
+        "Actions variables `AWS_ROLE_ARN_DEV/PROD/PLAN` set"
+      ],
+      "depends_on": [
+        "WFA-001"
+      ]
+    },
+    {
+      "id": "WFA-003",
+      "workstream": "A",
+      "milestone": "M1 Foundation & Design (Wk1)",
+      "title": "Terraform skeleton for dev and prod",
+      "goal": "Create root configs, shared tags, and empty module skeletons so CI validates.",
+      "paths": [
+        "infra/envs/dev/**",
+        "infra/envs/prod/**",
+        "infra/modules/**"
+      ],
+      "acceptance": [
+        "`terraform fmt -check` and `validate` pass for dev and prod in CI",
+        "Backend uses S3 + `use_lockfile`, keys `dev/terraform.tfstate` and `prod/terraform.tfstate`",
+        "Default tags Project/Env/ManagedBy applied",
+        "Root outputs declared per the outputs contract (may be placeholders until modules land)",
+        "No resources yet beyond what is required"
+      ],
+      "depends_on": [
+        "WFA-002"
+      ]
+    },
+    {
+      "id": "WFA-004",
+      "workstream": "A",
+      "milestone": "M1 Foundation & Design (Wk1)",
+      "title": "Deploy workflow works end to end for dev (empty stack)",
+      "goal": "Prove OIDC + plan + apply from GitHub Actions to dev.",
+      "paths": [
+        ".github/workflows/deploy.yml",
+        ".github/workflows/plan.yml"
+      ],
+      "acceptance": [
+        "Merge to main triggers deploy to dev using OIDC (no keys)",
+        "Plan and apply logs visible; prod path blocked unless tag `v*`",
+        "PR plan summary visible on a test PR touching infra",
+        "Screenshots/log links in PR"
+      ],
+      "depends_on": [
+        "WFA-003"
+      ]
+    },
+    {
+      "id": "WFA-005",
+      "workstream": "B",
+      "milestone": "M1 Foundation & Design (Wk1)",
+      "title": "Validate and finalise data model with fixtures and schemas",
+      "goal": "Turn doc 03 into machine-checkable JSON Schemas and tiny fixtures that tests can use.",
+      "paths": [
+        "data/schemas/**",
+        "data/fixtures/**",
+        "tests/unit/test_data_model.py"
+      ],
+      "acceptance": [
+        "JSON Schema per table item (employees, leave_records, recruitment_events, analytics, attrition_risk)",
+        "Fixture with 12 employees covering root, orphan, terminated, new joiner, cycle (invalid) cases",
+        "Tests validate fixtures against schemas",
+        "No change to doc 03 (if a gap is found, open an issue, do not edit the contract)"
+      ],
+      "depends_on": []
+    },
+    {
+      "id": "WFA-006",
+      "workstream": "C",
+      "milestone": "M1 Foundation & Design (Wk1)",
+      "title": "Mock API responses from the OpenAPI contract",
+      "goal": "Create `frontend/mock/*.json` for all six endpoints so the UI can be built before the API exists.",
+      "paths": [
+        "frontend/mock/**",
+        "tests/contract/test_mock_matches_openapi.py"
+      ],
+      "acceptance": [
+        "One JSON file per endpoint, realistic values for 8 departments and 12 months",
+        "Contract test validates every mock against `docs/openapi.yaml` schemas",
+        "Org-tree mock has 3+ levels and at least one warning example"
+      ],
+      "depends_on": []
+    },
+    {
+      "id": "WFA-007",
+      "workstream": "C",
+      "milestone": "M1 Foundation & Design (Wk1)",
+      "title": "UI design direction proposal (needs lead approval before building)",
+      "goal": "Propose 2-3 visual directions (palette, typography, layout, light/dark) for the dashboard. No production UI yet.",
+      "paths": [
+        "docs/ui-design-direction.md",
+        "docs/img/ui-*.png (optional sketches)"
+      ],
+      "acceptance": [
+        "Three directions with colours, fonts, layout sketch, chart styling",
+        "Accessibility notes (contrast, colour-blind-safe chart palette)",
+        "Lead picks one and records it in the doc; WFA-026+ do not start before this is approved"
+      ],
+      "depends_on": []
+    },
+    {
+      "id": "WFA-008",
+      "workstream": "A",
+      "milestone": "M2 Data & Compute (Wk2)",
+      "title": "Terraform module `data`: five DynamoDB tables",
+      "goal": "Create `employees`, `leave_records`, `recruitment_events`, `analytics` (with TTL on `ttl`), `attrition_risk` exactly as doc 03.",
+      "paths": [
+        "infra/modules/data/**",
+        "infra/envs/*/main.tf (module call only)"
+      ],
+      "acceptance": [
+        "Keys and types match doc 03",
+        "Provisioned capacity matches the budget table (23/23 total), no GSI, no PITR",
+        "TTL enabled on analytics `ttl`",
+        "Outputs: table names/ARNs for compute and api modules",
+        "`terraform plan` on dev shows only creates"
+      ],
+      "depends_on": [
+        "WFA-003",
+        "WFA-005"
+      ]
+    },
+    {
+      "id": "WFA-009",
+      "workstream": "B",
+      "milestone": "M2 Data & Compute (Wk2)",
+      "title": "Deterministic seed script",
+      "goal": "`data/seed.py --env dev|prod` loads realistic dummy data into DynamoDB. Reference date 2026-11-27, seed 42.",
+      "paths": [
+        "data/seed.py",
+        "data/README.md",
+        "data/names.py (if needed)"
+      ],
+      "acceptance": [
+        "80 active employees with department distribution from doc 03 + ~14 terminated in last 12 months",
+        "Hierarchy: 1 root, depth <= 6, no cycles, managers valid",
+        "Leave records never span months; performance scores 1-5 plausible",
+        "Recruitment: ~25 candidates/month for 12 months",
+        "Uses batch writes with exponential backoff; idempotent (second run changes nothing)",
+        "`--dry-run` prints counts and a dataset checksum; same checksum every run",
+        "Runs against moto in tests and against real dev tables"
+      ],
+      "depends_on": [
+        "WFA-005",
+        "WFA-008"
+      ]
+    },
+    {
+      "id": "WFA-010",
+      "workstream": "B",
+      "milestone": "M2 Data & Compute (Wk2)",
+      "title": "Seed validation tests",
+      "goal": "Prove the seeded dataset satisfies every rule in doc 03.",
+      "paths": [
+        "tests/unit/test_seed.py"
+      ],
+      "acceptance": [
+        "Asserts counts, department distribution, hierarchy integrity, no month-spanning leave",
+        "Asserts deterministic checksum equals a pinned value",
+        "Runs in `make verify` in under 30 s"
+      ],
+      "depends_on": [
+        "WFA-009"
+      ]
+    },
+    {
+      "id": "WFA-011",
+      "workstream": "B",
+      "milestone": "M2 Data & Compute (Wk2)",
+      "title": "Aggregator: headcount, hires, departures",
+      "goal": "Pure functions + tests for monthly headcount/hires/departures per department and totals, last 12 months.",
+      "paths": [
+        "services/aggregator/metrics_headcount.py",
+        "tests/unit/test_metrics_headcount.py"
+      ],
+      "acceptance": [
+        "Definitions exactly as doc 03",
+        "Edge cases tested: hire and termination in same month, termination at month end, first/last month",
+        "Returns `{metric_name: {month: value}}` structure used by the handler"
+      ],
+      "depends_on": [
+        "WFA-005"
+      ]
+    },
+    {
+      "id": "WFA-012",
+      "workstream": "B",
+      "milestone": "M2 Data & Compute (Wk2)",
+      "title": "Aggregator: leave utilisation and 3-month average",
+      "goal": "Compute `leave_util_<dept>` and `leave_util_3mo_avg_<dept>` per doc 03.",
+      "paths": [
+        "services/aggregator/metrics_leave.py",
+        "tests/unit/test_metrics_leave.py"
+      ],
+      "acceptance": [
+        "Formula exactly as doc 03 (2 days/month/employee, 1 decimal)",
+        "3-month average uses the 3 months before the month; handles months with <3 prior months",
+        "Zero-headcount department/month handled without division error"
+      ],
+      "depends_on": [
+        "WFA-005"
+      ]
+    },
+    {
+      "id": "WFA-013",
+      "workstream": "B",
+      "milestone": "M2 Data & Compute (Wk2)",
+      "title": "Aggregator: recruitment funnel",
+      "goal": "Compute `funnel_*` cohort counts per month.",
+      "paths": [
+        "services/aggregator/metrics_funnel.py",
+        "tests/unit/test_metrics_funnel.py"
+      ],
+      "acceptance": [
+        "Counts are cohort-based and monotonic non-increasing across stages",
+        "Months with no candidates return zeros for all five stages"
+      ],
+      "depends_on": [
+        "WFA-005"
+      ]
+    },
+    {
+      "id": "WFA-014",
+      "workstream": "B",
+      "milestone": "M2 Data & Compute (Wk2)",
+      "title": "Attrition risk scoring module",
+      "goal": "Pure function implementing doc 04 exactly, with per-factor points.",
+      "paths": [
+        "services/aggregator/risk.py",
+        "tests/unit/test_risk.py"
+      ],
+      "acceptance": [
+        "Weights 0.40/0.35/0.25, tenure lookup and bands exactly as doc 04",
+        "Worked example in doc 04 reproduced (87.5 High)",
+        "Boundary tests: 39.9/40.0, 64.9/65.0, tenure 5/6/11/12/23/24/35/36/59/60, new joiner proration",
+        "Decimal rounding half-up; deterministic ranking and tie-break"
+      ],
+      "depends_on": [
+        "WFA-005"
+      ]
+    },
+    {
+      "id": "WFA-015",
+      "workstream": "B",
+      "milestone": "M2 Data & Compute (Wk2)",
+      "title": "Aggregator handler: orchestration, idempotent writes, EMF metrics, 12-month backfill",
+      "goal": "`handler.lambda_handler` reads source tables, calls metric modules, writes `analytics` and `attrition_risk` (PutItem overwrite), emits EMF metrics.",
+      "paths": [
+        "services/aggregator/handler.py",
+        "services/aggregator/io.py",
+        "tests/unit/test_aggregator_handler.py"
+      ],
+      "acceptance": [
+        "Accepts `{}` and `{\"as_of\":\"YYYY-MM-DD\"}`",
+        "Writes every metric name in doc 03 for 12 months, plus risk rows and `risk_band_*`",
+        "Running twice yields identical tables (moto test)",
+        "Throttling handled with retries; fails loudly (exception) if write ultimately fails",
+        "Emits `EmployeesProcessed`, `MetricsWritten`, `AggregatorSuccess` via EMF; no PutMetricData calls",
+        "On success writes one `sys_aggregator_last_success` row (date = run timestamp, value = epoch seconds, ttl +7 days)"
+      ],
+      "depends_on": [
+        "WFA-011",
+        "WFA-012",
+        "WFA-013",
+        "WFA-014"
+      ]
+    },
+    {
+      "id": "WFA-016",
+      "workstream": "B",
+      "milestone": "M2 Data & Compute (Wk2)",
+      "title": "Golden-file test",
+      "goal": "Pin aggregator output on seed data so accidental changes are caught.",
+      "paths": [
+        "tests/golden/**"
+      ],
+      "acceptance": [
+        "Test seeds moto with seed 42, runs aggregator with `as_of=2026-11-27`, compares to committed `expected_analytics.json` and `expected_risk.json`",
+        "README explains how to regenerate and when that is allowed",
+        "Intentional diff on a deliberate formula change is demonstrated in the PR"
+      ],
+      "depends_on": [
+        "WFA-009",
+        "WFA-015"
+      ]
+    },
+    {
+      "id": "WFA-017",
+      "workstream": "A",
+      "milestone": "M2 Data & Compute (Wk2)",
+      "title": "Terraform module `compute`: aggregator Lambda + daily schedule",
+      "goal": "Deploy the aggregator with least-privilege IAM and EventBridge Scheduler (daily 01:00 IST).",
+      "paths": [
+        "infra/modules/compute/**",
+        "infra/envs/*/main.tf (module call only)"
+      ],
+      "acceptance": [
+        "Function `wfa-<env>-aggregator`, python3.12, arm64, 512 MB, 120 s, zip from `build/aggregator.zip`",
+        "IAM exactly as doc 02 table",
+        "Log group retention 14 days",
+        "Schedule enabled; manual test invoke succeeds in dev",
+        "No wildcard resource ARNs"
+      ],
+      "depends_on": [
+        "WFA-008",
+        "WFA-015"
+      ]
+    },
+    {
+      "id": "WFA-018",
+      "workstream": "A",
+      "milestone": "M3 API, Auth & Frontend (Wk3)",
+      "title": "Terraform module `auth`: Cognito",
+      "goal": "User pool, groups `HR_Admin` and `Leadership`, public app client (auth code + PKCE, no secret), hosted UI domain.",
+      "paths": [
+        "infra/modules/auth/**",
+        "infra/envs/*/main.tf (module call only)"
+      ],
+      "acceptance": [
+        "Pool `wfa-<env>-users`, email sign-in, no self sign-up",
+        "Groups created; client callback/logout URLs use the CloudFront domain (and `http://localhost:8080` in dev only)",
+        "Domain prefix `wfa-<env>-amit-cloudops`",
+        "Outputs `cognito_user_pool_id`, `cognito_client_id`, `cognito_domain` per contract",
+        "Stays on Lite/Essentials tier"
+      ],
+      "depends_on": [
+        "WFA-003"
+      ]
+    },
+    {
+      "id": "WFA-019",
+      "workstream": "C",
+      "milestone": "M3 API, Auth & Frontend (Wk3)",
+      "title": "Shared Lambda library: auth, responses, errors, CORS",
+      "goal": "`services/shared` used by every API Lambda.",
+      "paths": [
+        "services/shared/**",
+        "tests/unit/test_shared.py"
+      ],
+      "acceptance": [
+        "`require_group(event)` allows only `HR_Admin`/`Leadership`, returns 403 JSON error otherwise, 401 if claims missing",
+        "`ok(body)` and `error(code, msg, status)` produce the exact shapes from OpenAPI incl. CORS headers",
+        "Decimal-safe JSON serialisation",
+        "Fully unit-tested"
+      ],
+      "depends_on": [
+        "WFA-006"
+      ]
+    },
+    {
+      "id": "WFA-020",
+      "workstream": "C",
+      "milestone": "M3 API, Auth & Frontend (Wk3)",
+      "title": "API Lambda: `api_metrics` (headcount, leave, funnel, system health)",
+      "goal": "Serve `/metrics/headcount`, `/metrics/leave`, `/metrics/funnel` and `/system/health` from the analytics table (health reads the `sys_*` rows written by WFA-025).",
+      "paths": [
+        "services/api_metrics/**",
+        "tests/contract/test_api_metrics.py"
+      ],
+      "acceptance": [
+        "Responses validate against OpenAPI schemas",
+        "Months ascending; arrays aligned; missing data yields zeros not errors",
+        "`months` and `month` query params validated (400 on bad input; add to OpenAPI only via lead)",
+        "`/system/health` returns series for the last 60 min and aggregator status (ok if last success < 26 h, stale otherwise, unknown if never)",
+        "Handler uses only `Query` on analytics"
+      ],
+      "depends_on": [
+        "WFA-015",
+        "WFA-019"
+      ]
+    },
+    {
+      "id": "WFA-021",
+      "workstream": "C",
+      "milestone": "M3 API, Auth & Frontend (Wk3)",
+      "title": "API Lambda: `api_attrition` (top 10)",
+      "goal": "Serve `/attrition/top10` from `attrition_risk` and `analytics` distribution.",
+      "paths": [
+        "services/api_attrition/**",
+        "tests/contract/test_api_attrition.py"
+      ],
+      "acceptance": [
+        "Exactly 10 (or fewer if fewer active) sorted by score desc, tie-break employee_id asc",
+        "Each row has 3 factors with raw input and weighted points",
+        "Distribution counts match `risk_band_*`",
+        "Validates against OpenAPI"
+      ],
+      "depends_on": [
+        "WFA-015",
+        "WFA-019"
+      ]
+    },
+    {
+      "id": "WFA-022",
+      "workstream": "C",
+      "milestone": "M3 API, Auth & Frontend (Wk3)",
+      "title": "API Lambda: `api_org` (recursive org tree)",
+      "goal": "Build nested tree from `manager_id` with recursion.",
+      "paths": [
+        "services/api_org/**",
+        "tests/unit/test_org_tree.py",
+        "tests/contract/test_api_org.py"
+      ],
+      "acceptance": [
+        "Single root; children sorted by name",
+        "Cycle detected and broken with a warning; orphans attached to root with a warning; depth limit 15 with a warning",
+        "Only ACTIVE employees included",
+        "Validates against OpenAPI; tested with fixtures from WFA-005"
+      ],
+      "depends_on": [
+        "WFA-005",
+        "WFA-019"
+      ]
+    },
+    {
+      "id": "WFA-023",
+      "workstream": "A",
+      "milestone": "M3 API, Auth & Frontend (Wk3)",
+      "title": "Terraform module `api`: HTTP API, JWT authorizer, routes",
+      "goal": "Wire the three API Lambdas and the health route to API Gateway with Cognito JWT authorizer.",
+      "paths": [
+        "infra/modules/api/**",
+        "infra/envs/*/main.tf (module call only)"
+      ],
+      "acceptance": [
+        "All 6 routes from OpenAPI exist, `GET` only, JWT authorizer on all",
+        "CORS allows only the CloudFront origin (plus localhost in dev)",
+        "Throttling burst 20 / rate 10; access logs retention 14 days",
+        "Lambda IAM per doc 02; output `api_url`",
+        "No-token request returns 401"
+      ],
+      "depends_on": [
+        "WFA-017",
+        "WFA-018",
+        "WFA-020",
+        "WFA-021",
+        "WFA-022",
+        "WFA-025"
+      ]
+    },
+    {
+      "id": "WFA-024",
+      "workstream": "C",
+      "milestone": "M3 API, Auth & Frontend (Wk3)",
+      "title": "Contract test suite for all endpoints",
+      "goal": "One suite that exercises every API handler and validates against OpenAPI, including auth failures.",
+      "paths": [
+        "tests/contract/**"
+      ],
+      "acceptance": [
+        "Every route: 200 shape valid, 401 without claims, 403 without group",
+        "Suite fails if a route is added to OpenAPI without a test",
+        "Runs in `make verify`"
+      ],
+      "depends_on": [
+        "WFA-020",
+        "WFA-021",
+        "WFA-022"
+      ]
+    },
+    {
+      "id": "WFA-025",
+      "workstream": "A",
+      "milestone": "M3 API, Auth & Frontend (Wk3)",
+      "title": "health_snapshot Lambda + 15-minute schedule",
+      "goal": "Every 15 min read last 60 min of API Gateway and Lambda metrics and store `sys_*` rows in `analytics` (served to the UI by `api_metrics`, see WFA-020).",
+      "paths": [
+        "services/health_snapshot/**",
+        "infra/modules/monitoring/** (schedule + IAM only)",
+        "tests/unit/test_health_snapshot.py"
+      ],
+      "acceptance": [
+        "Writes `sys_api_requests`, `sys_api_5xx`, `sys_lambda_errors`, `sys_lambda_invocations` with TTL 7 days",
+        "Uses `GetMetricData` once per run (batched)",
+        "IAM: GetMetricData + PutItem on analytics only"
+      ],
+      "depends_on": [
+        "WFA-008",
+        "WFA-015"
+      ]
+    },
+    {
+      "id": "WFA-026",
+      "workstream": "C",
+      "milestone": "M3 API, Auth & Frontend (Wk3)",
+      "title": "SPA shell: login (PKCE), tabs, config, API client",
+      "goal": "App shell with Cognito Hosted UI login, token handling, route guard, tab navigation, loading/error states, mock mode.",
+      "paths": [
+        "frontend/index.html",
+        "frontend/css/**",
+        "frontend/js/**"
+      ],
+      "acceptance": [
+        "Follows the approved design direction (WFA-007)",
+        "Loads `config.json`; `?mock=1` uses `frontend/mock`",
+        "PKCE auth-code flow, tokens kept in memory/sessionStorage, logout works",
+        "Denied screen for users without group",
+        "Chart.js and D3 from CDN pinned with SRI hashes"
+      ],
+      "depends_on": [
+        "WFA-006",
+        "WFA-007",
+        "WFA-018"
+      ]
+    },
+    {
+      "id": "WFA-027",
+      "workstream": "C",
+      "milestone": "M3 API, Auth & Frontend (Wk3)",
+      "title": "Charts: headcount trend and leave utilisation",
+      "goal": "Grouped bar (hires vs departures) and horizontal bar (current vs 3-month avg).",
+      "paths": [
+        "frontend/js/charts/headcount.js",
+        "frontend/js/charts/leave.js",
+        "frontend/css/**"
+      ],
+      "acceptance": [
+        "Department filter for headcount chart",
+        "Both charts keyboard/tooltips accessible, colour-blind-safe",
+        "Work in mock mode and live mode"
+      ],
+      "depends_on": [
+        "WFA-026"
+      ]
+    },
+    {
+      "id": "WFA-028",
+      "workstream": "C",
+      "milestone": "M3 API, Auth & Frontend (Wk3)",
+      "title": "Charts: recruitment funnel and risk distribution",
+      "goal": "Funnel (horizontal stages with conversion %) and doughnut (low/medium/high).",
+      "paths": [
+        "frontend/js/charts/funnel.js",
+        "frontend/js/charts/risk.js"
+      ],
+      "acceptance": [
+        "Funnel shows 5 ordered stages with counts and conversion",
+        "Doughnut uses thresholds from API response",
+        "Empty-state handling"
+      ],
+      "depends_on": [
+        "WFA-026"
+      ]
+    },
+    {
+      "id": "WFA-029",
+      "workstream": "C",
+      "milestone": "M3 API, Auth & Frontend (Wk3)",
+      "title": "Attrition table with sortable columns and factor breakdown",
+      "goal": "Top-10 table; click headers to sort; expandable factor details.",
+      "paths": [
+        "frontend/js/attrition-table.js"
+      ],
+      "acceptance": [
+        "Sortable by rank, name, department, score, band (asc/desc, indicated visually)",
+        "Contributing factors visible per row (inputs and weighted points)",
+        "Band shown with text + colour (not colour only)",
+        "Keyboard accessible"
+      ],
+      "depends_on": [
+        "WFA-026"
+      ]
+    },
+    {
+      "id": "WFA-030",
+      "workstream": "C",
+      "milestone": "M3 API, Auth & Frontend (Wk3)",
+      "title": "Org chart tab (D3)",
+      "goal": "Interactive tree in its own tab.",
+      "paths": [
+        "frontend/js/org-chart.js"
+      ],
+      "acceptance": [
+        "Expand/collapse nodes, zoom/pan, search by name highlights and focuses node",
+        "Renders all ~80 active employees smoothly",
+        "Shows API warnings if present",
+        "Works in mock and live modes"
+      ],
+      "depends_on": [
+        "WFA-026"
+      ]
+    },
+    {
+      "id": "WFA-031",
+      "workstream": "C",
+      "milestone": "M3 API, Auth & Frontend (Wk3)",
+      "title": "System health widget",
+      "goal": "Small panel showing API requests, 5xx, Lambda errors (last 60 min) and aggregator status.",
+      "paths": [
+        "frontend/js/health-widget.js"
+      ],
+      "acceptance": [
+        "Sparkline or small chart + totals",
+        "Aggregator status badge (ok/stale/unknown) with last success time",
+        "Auto-refreshes every 60 s without piling up requests"
+      ],
+      "depends_on": [
+        "WFA-026",
+        "WFA-020"
+      ]
+    },
+    {
+      "id": "WFA-032",
+      "workstream": "A",
+      "milestone": "M3 API, Auth & Frontend (Wk3)",
+      "title": "Terraform module `frontend`: private S3 + CloudFront (OAC)",
+      "goal": "Host the SPA securely over HTTPS.",
+      "paths": [
+        "infra/modules/frontend/**",
+        "infra/envs/*/main.tf (module call only)"
+      ],
+      "acceptance": [
+        "Bucket private with Block Public Access; only CloudFront OAC can read",
+        "HTTP redirects to HTTPS, TLS 1.2+, SPA fallback to index.html for 403/404",
+        "Response headers policy (HSTS, nosniff, frame deny, referrer policy, CSP allowing self, pinned CDNs, API and Cognito origins)",
+        "Outputs `frontend_bucket`, `cloudfront_distribution_id`, `cloudfront_domain`",
+        "Deploy workflow publishes `config.json` and syncs `frontend/`"
+      ],
+      "depends_on": [
+        "WFA-003"
+      ]
+    },
+    {
+      "id": "WFA-033",
+      "workstream": "ALL",
+      "milestone": "M4 Operate, Harden & Release (Wk4)",
+      "title": "Accessibility and responsive pass",
+      "goal": "Make the dashboard usable on phone and keyboard.",
+      "paths": [
+        "frontend/**"
+      ],
+      "acceptance": [
+        "Usable at 360 px width; tables scroll inside containers",
+        "All interactive elements reachable by keyboard with visible focus",
+        "Contrast meets WCAG AA; no information by colour alone",
+        "Lighthouse accessibility score recorded in PR"
+      ],
+      "depends_on": [
+        "WFA-027",
+        "WFA-028",
+        "WFA-029",
+        "WFA-030",
+        "WFA-031"
+      ]
+    },
+    {
+      "id": "WFA-034",
+      "workstream": "A",
+      "milestone": "M4 Operate, Harden & Release (Wk4)",
+      "title": "Terraform module `monitoring`: alarms, SNS, budgets visibility",
+      "goal": "Alarms for aggregator no-success 26 h, Lambda errors, API 5xx, with SNS email.",
+      "paths": [
+        "infra/modules/monitoring/**",
+        "docs/11-runbook.md"
+      ],
+      "acceptance": [
+        "Alarms exist per doc 02 SLO table; <= 10 alarms total",
+        "SNS topic `wfa-<env>-alerts`; output `sns_alert_topic_arn`",
+        "Runbook alert table verified against real alarm names"
+      ],
+      "depends_on": [
+        "WFA-017",
+        "WFA-023"
+      ]
+    },
+    {
+      "id": "WFA-035",
+      "workstream": "A",
+      "milestone": "M4 Operate, Harden & Release (Wk4)",
+      "title": "Security hardening: tighten IAM, scan IaC",
+      "goal": "Replace AdministratorAccess deploy roles with scoped policies; add IaC scanning.",
+      "paths": [
+        ".github/workflows/ci.yml",
+        "docs/09-bootstrap-console-guide.md",
+        "docs/adr/**"
+      ],
+      "acceptance": [
+        "Deploy roles scoped to `wfa-*` resources and required services only (documented policy)",
+        "Checkov (or tfsec) runs in CI; findings triaged with written justifications",
+        "No wildcard IAM actions/resources without justification",
+        "ADR recording the final role design"
+      ],
+      "depends_on": [
+        "WFA-023",
+        "WFA-032"
+      ]
+    },
+    {
+      "id": "WFA-036",
+      "workstream": "A",
+      "milestone": "M4 Operate, Harden & Release (Wk4)",
+      "title": "Game day on dev",
+      "goal": "Break things on purpose and prove detection and recovery.",
+      "paths": [
+        "docs/11-runbook.md",
+        "docs/GAMEDAY.md"
+      ],
+      "acceptance": [
+        "Scenarios run: aggregator fails, API 5xx, expired/invalid token, DynamoDB throttling, bad deploy rollback",
+        "Each scenario: alarm fired (screenshot), time to detect, fix, runbook updated",
+        "Gaps turned into issues"
+      ],
+      "depends_on": [
+        "WFA-034"
+      ]
+    },
+    {
+      "id": "WFA-037",
+      "workstream": "A",
+      "milestone": "M4 Operate, Harden & Release (Wk4)",
+      "title": "Smoke test script",
+      "goal": "`scripts/smoke.sh <env>` verifies a deployed environment end to end.",
+      "paths": [
+        "scripts/smoke.sh",
+        "docs/10-testing-strategy.md"
+      ],
+      "acceptance": [
+        "Checks: SPA 200 over HTTPS, API 401 without token, 403 for no-group user, 200 on all 6 routes for HR_Admin user",
+        "Exits non-zero on first failure with clear message",
+        "Documented how to obtain test tokens (dev client only may enable USER_PASSWORD_AUTH; never prod)"
+      ],
+      "depends_on": [
+        "WFA-023",
+        "WFA-032"
+      ]
+    },
+    {
+      "id": "WFA-038",
+      "workstream": "A",
+      "milestone": "M4 Operate, Harden & Release (Wk4)",
+      "title": "Production release v1.0.0",
+      "goal": "Tag, approve and deploy to prod; tick the Definition of Done.",
+      "paths": [
+        "docs/12-definition-of-done.md",
+        "CHANGELOG.md"
+      ],
+      "acceptance": [
+        "All DoD items ticked with evidence",
+        "Prod deployed from tag `v1.0.0` via approval",
+        "Cognito users + SNS subscription configured on prod",
+        "`terraform plan` on prod shows no drift after deploy",
+        "Budget shows $0"
+      ],
+      "depends_on": [
+        "WFA-035",
+        "WFA-036",
+        "WFA-037",
+        "WFA-033",
+        "WFA-039"
+      ]
+    },
+    {
+      "id": "WFA-039",
+      "workstream": "ALL",
+      "milestone": "M4 Operate, Harden & Release (Wk4)",
+      "title": "Final architecture diagram, README polish, screenshots",
+      "goal": "Export the diagram, add screenshots and live link, state limitations.",
+      "paths": [
+        "README.md",
+        "docs/02-architecture.md",
+        "docs/img/**"
+      ],
+      "acceptance": [
+        "Diagram image in `docs/img/`",
+        "README has live demo link, 4+ screenshots, limitations statement from doc 04",
+        "Repo About/topics set"
+      ],
+      "depends_on": [
+        "WFA-033"
+      ]
+    },
+    {
+      "id": "WFA-040",
+      "workstream": "ALL",
+      "milestone": "M4 Operate, Harden & Release (Wk4)",
+      "title": "Demo script and project write-up",
+      "goal": "A 5-minute demo script and a short write-up for portfolio/LinkedIn.",
+      "paths": [
+        "docs/DEMO.md"
+      ],
+      "acceptance": [
+        "Step-by-step demo with expected screens",
+        "Talking points: architecture, free-tier design, SRE practices, AI-assisted workflow with guardrails",
+        "Each teammate's contribution described"
+      ],
+      "depends_on": [
+        "WFA-039"
+      ]
+    }
+  ]
+}
